@@ -6,7 +6,7 @@ title: 'Checkout SDK'
 {/* Imports */}  
 
 <Note>  
-**Note – Beta release** 
+**Note – Beta release**
   
 The Checkout SDK is in a beta phase. It has been adopted and integrated by first users, but frequent updates and patches may be made. See the note on Version policy below for how you can best manage this.  
 </Note>  
@@ -57,7 +57,95 @@ For Google Pay and Apple Pay, with the payment method’s API to generate tokeni
 -If required, the SDK handles additional redirect actions: 3DS authorization or validation via payment method interface (e.g. PayPal).  
 -You present the payment result to the user.  
 
-## Flow diagramTW a workflow was visible here. Please add it.  
+## Flow diagram
+
+```mermaid
+%%{
+  init: {
+    'theme': 'base',
+    'themeVariables': {
+      'primaryColor': '#F5F3F5',
+      'primaryTextColor': '#2D0F37',
+      'primaryBorderColor': '#2D0F37',
+      'lineColor': '#2D0F37',
+      'noteBkgColor': '#E0DBE1',
+      'actorLineColor': '#F5F3F5',
+      'sequenceNumberColor': '#F5F3F5',
+      'secondaryColor': '#FCB069',
+      'tertiaryColor': '#FCB069'
+    }
+  }
+}%%
+
+sequenceDiagram
+autonumber
+
+participant User
+participant App
+participant Checkout
+participant Backend
+participant Mangopay API
+participant Vault
+
+Note left of User: 1. Initiation & payment method selection
+
+rect rgb(245, 245, 245)
+
+User-->>App: Proceed to payment
+App->>Checkout: Initialize SDK 
+Checkout-->>User: Present payment form
+User-->>Checkout: Select payment method (optional: enter card data)
+
+end 
+
+Note left of User: 2. Tokenization
+
+alt If Card Registration
+
+
+Checkout->>App: Call card registration delegate
+App->>Backend: Request card registration
+Backend->>Mangopay API: POST Create Card Registration
+Mangopay API->>Checkout: Return Card Registration
+Checkout->>Checkout: Tokenize card
+Checkout->>Checkout: Event: onTokenizationCompleted ()
+
+else If Apple Pay, Google Pay
+
+Checkout-->>User: Launch payment method UI
+User-->>Checkout: User authorizes payment
+Checkout->>Checkout: Obtain payment token
+Checkout->>Checkout: Event: onTokenizationCompleted()
+
+end
+
+Note left of User: LOADING STATE
+
+Note left of User: 3. Payment
+
+rect rgb(245, 245, 245)
+
+ Checkout->>App: Call pay-in delegate
+ App->>Backend: Request pay-in
+ Backend->>Mangopay API: POST Create PayIn
+ Mangopay API-->>Backend: Return PayIn (ReturnURL=checkout.mangopay.com)
+ Backend-->>App: Return PayIn to delegate
+ App->>Checkout: Return PayIn from delegate
+
+opt if redirection (3DS, PayPal)
+
+   Checkout-->>User: Redirect for authorization or completion
+   User-->>Mangopay API: User authorizes or completes
+   Mangopay API->>Checkout: Return to checkout.mangopay.com
+
+end
+
+Checkout->>App: Event: onPaymentCompleted()
+App->>Checkout: Dismiss Checkout UI
+App-->>User: Present result
+
+end
+```
 
 ## Resources  
 
